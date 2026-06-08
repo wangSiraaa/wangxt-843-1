@@ -71,6 +71,16 @@ export interface CheckInRecord {
   checkedInBy: string;
 }
 
+export interface FoldRecord {
+  id: string;
+  routeId: string;
+  stopId: string;
+  date: string;
+  isFolded: boolean;
+  operatedBy: string;
+  operatedAt: string;
+}
+
 export type ViewMode = 'employee' | 'admin' | 'driver';
 
 export interface AppState {
@@ -80,6 +90,8 @@ export interface AppState {
   waitlistEntries: WaitlistEntry[];
   changeRecords: ChangeRecord[];
   checkInRecords: CheckInRecord[];
+  foldRecords: FoldRecord[];
+  foldedStops: Record<string, boolean>;
   selectedRouteId: string | null;
   selectedDate: string;
   viewMode: ViewMode;

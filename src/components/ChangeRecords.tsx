@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { RefreshCw, ArrowRight, FileText, MapPin } from 'lucide-react';
+import { RefreshCw, ArrowRight, FileText, MapPin, Minimize2, Maximize2 } from 'lucide-react';
 import { useShuttleStore } from '../store/useShuttleStore';
+import type { FoldRecord } from '../types';
 
 export const ChangeRecords: React.FC = () => {
   const {
@@ -12,6 +13,8 @@ export const ChangeRecords: React.FC = () => {
     registrations,
     changeRegistration,
     selectedDate,
+    getFoldRecordsForRoute,
+    selectedRouteId,
   } = useShuttleStore();
 
   const [showChangeForm, setShowChangeForm] = useState(false);
@@ -20,6 +23,7 @@ export const ChangeRecords: React.FC = () => {
   const [newStopId, setNewStopId] = useState('');
   const [reason, setReason] = useState('');
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [activeSubTab, setActiveSubTab] = useState<'change' | 'fold'>('change');
 
   const filteredRecords =
     viewMode === 'employee' && currentEmployeeId
@@ -64,16 +68,26 @@ export const ChangeRecords: React.FC = () => {
 
   const newRoute = routes.find((r) => r.id === newRouteId);
 
+  const foldRecords = selectedRouteId ? getFoldRecordsForRoute(selectedRouteId, selectedDate) : [];
+
+  const getFoldStopName = (record: FoldRecord) => {
+    const route = routes.find((r) => r.id === record.routeId);
+    return route?.stops.find((s) => s.id === record.stopId)?.name || '未知站点';
+  };
+
+  const getFoldRouteName = (record: FoldRecord) => {
+    return routes.find((r) => r.id === record.routeId)?.name || '未知线路';
+  };
+
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-2">
           <RefreshCw className="text-purple-600" size={24} />
-          <h2 className="text-xl font-bold text-gray-800">改签记录</h2>
-          <span className="text-sm text-gray-500">({filteredRecords.length} 条记录)</span>
+          <h2 className="text-xl font-bold text-gray-800">历史记录</h2>
         </div>
 
-        {viewMode === 'employee' && currentEmployeeId && myRegistrations.length > 0 && (
+        {viewMode === 'employee' && currentEmployeeId && myRegistrations.length > 0 && activeSubTab === 'change' && (
           <button
             onClick={() => setShowChangeForm(!showChangeForm)}
             className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 transition-colors"
@@ -83,6 +97,35 @@ export const ChangeRecords: React.FC = () => {
           </button>
         )}
       </div>
+
+      {viewMode !== 'employee' && (
+        <div className="mb-6 border-b border-gray-100">
+          <div className="flex gap-2">
+            <button
+              onClick={() => setActiveSubTab('change')}
+              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                activeSubTab === 'change'
+                  ? 'border-purple-600 text-purple-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <RefreshCw size={14} className="inline mr-1" />
+              改签记录 ({filteredRecords.length})
+            </button>
+            <button
+              onClick={() => setActiveSubTab('fold')}
+              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                activeSubTab === 'fold'
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <Minimize2 size={14} className="inline mr-1" />
+              折叠记录 ({foldRecords.length})
+            </button>
+          </div>
+        </div>
+      )}
 
       {message && (
         <div
@@ -183,60 +226,121 @@ export const ChangeRecords: React.FC = () => {
         </div>
       )}
 
-      {filteredRecords.length === 0 ? (
-        <div className="text-center py-8 text-gray-400">
-          <FileText size={48} className="mx-auto mb-4 opacity-50" />
-          <p>暂无改签记录</p>
-        </div>
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-gray-50">
-                <th className="px-4 py-3 text-left font-medium text-gray-600">员工</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-600">原线路</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-600"></th>
-                <th className="px-4 py-3 text-left font-medium text-gray-600">新线路</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-600">原因</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-600">日期</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-600">操作时间</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {[...filteredRecords]
-                .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-                .map((record) => (
-                  <tr key={record.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3">
-                      <span className="font-medium text-gray-800">{getEmployeeName(record.employeeId)}</span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="text-gray-800">{getRouteName(record.oldRouteId)}</div>
-                      <div className="text-xs text-gray-500 flex items-center gap-1">
-                        <MapPin size={12} />
-                        {getStopName(record.oldRouteId, record.oldStopId)}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <ArrowRight size={20} className="text-gray-400" />
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="text-gray-800">{getRouteName(record.newRouteId)}</div>
-                      <div className="text-xs text-gray-500 flex items-center gap-1">
-                        <MapPin size={12} />
-                        {getStopName(record.newRouteId, record.newStopId)}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-gray-600">{record.reason}</td>
-                    <td className="px-4 py-3 text-gray-600">{record.date}</td>
-                    <td className="px-4 py-3 text-gray-500">
-                      {new Date(record.createdAt).toLocaleString('zh-CN')}
-                    </td>
+      {activeSubTab === 'change' ? (
+        <>
+          {filteredRecords.length === 0 ? (
+            <div className="text-center py-8 text-gray-400">
+              <FileText size={48} className="mx-auto mb-4 opacity-50" />
+              <p>暂无改签记录</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-gray-50">
+                    <th className="px-4 py-3 text-left font-medium text-gray-600">员工</th>
+                    <th className="px-4 py-3 text-left font-medium text-gray-600">原线路</th>
+                    <th className="px-4 py-3 text-left font-medium text-gray-600"></th>
+                    <th className="px-4 py-3 text-left font-medium text-gray-600">新线路</th>
+                    <th className="px-4 py-3 text-left font-medium text-gray-600">原因</th>
+                    <th className="px-4 py-3 text-left font-medium text-gray-600">日期</th>
+                    <th className="px-4 py-3 text-left font-medium text-gray-600">操作时间</th>
                   </tr>
-                ))}
-            </tbody>
-          </table>
-        </div>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {[...filteredRecords]
+                    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                    .map((record) => (
+                      <tr key={record.id} className="hover:bg-gray-50">
+                        <td className="px-4 py-3">
+                          <span className="font-medium text-gray-800">{getEmployeeName(record.employeeId)}</span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="text-gray-800">{getRouteName(record.oldRouteId)}</div>
+                          <div className="text-xs text-gray-500 flex items-center gap-1">
+                            <MapPin size={12} />
+                            {getStopName(record.oldRouteId, record.oldStopId)}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <ArrowRight size={20} className="text-gray-400" />
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="text-gray-800">{getRouteName(record.newRouteId)}</div>
+                          <div className="text-xs text-gray-500 flex items-center gap-1">
+                            <MapPin size={12} />
+                            {getStopName(record.newRouteId, record.newStopId)}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-gray-600">{record.reason}</td>
+                        <td className="px-4 py-3 text-gray-600">{record.date}</td>
+                        <td className="px-4 py-3 text-gray-500">
+                          {new Date(record.createdAt).toLocaleString('zh-CN')}
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
+      ) : (
+        <>
+          {foldRecords.length === 0 ? (
+            <div className="text-center py-8 text-gray-400">
+              <Minimize2 size={48} className="mx-auto mb-4 opacity-50" />
+              <p>暂无折叠记录</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-gray-50">
+                    <th className="px-4 py-3 text-left font-medium text-gray-600">线路</th>
+                    <th className="px-4 py-3 text-left font-medium text-gray-600">站点</th>
+                    <th className="px-4 py-3 text-left font-medium text-gray-600">操作</th>
+                    <th className="px-4 py-3 text-left font-medium text-gray-600">操作人</th>
+                    <th className="px-4 py-3 text-left font-medium text-gray-600">日期</th>
+                    <th className="px-4 py-3 text-left font-medium text-gray-600">操作时间</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {foldRecords.map((record) => (
+                    <tr key={record.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3">
+                        <div className="text-gray-800 font-medium">{getFoldRouteName(record)}</div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="text-gray-800 flex items-center gap-1">
+                          <MapPin size={14} className="text-gray-400" />
+                          {getFoldStopName(record)}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        {record.isFolded ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full font-medium">
+                            <Minimize2 size={12} />
+                            折叠
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full font-medium">
+                            <Maximize2 size={12} />
+                            展开
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-gray-600">{record.operatedBy}</td>
+                      <td className="px-4 py-3 text-gray-600">{record.date}</td>
+                      <td className="px-4 py-3 text-gray-500">
+                        {new Date(record.operatedAt).toLocaleString('zh-CN')}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

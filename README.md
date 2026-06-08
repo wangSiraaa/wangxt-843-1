@@ -1,73 +1,111 @@
-# React + TypeScript + Vite
+# 企业班车乘车名单系统
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+基于 React + TypeScript + Vite 构建的企业班车管理系统，支持员工报名、候补管理、司机签到、名单导出等功能。
 
-Currently, two official plugins are available:
+## 系统入口
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+开发服务器启动后访问：
 
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```
+http://localhost:5182
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### 视图模式快捷入口
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+- **员工视图**: `http://localhost:5182/?viewMode=employee`
+- **管理员视图**: `http://localhost:5182/?viewMode=admin`
+- **司机视图**: `http://localhost:5182/?viewMode=driver`
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## 测试账号
+
+系统预置以下模拟员工账号（员工视图中选择使用）：
+
+| 工号 | 姓名 | 部门 | 默认选中 |
+|------|------|------|----------|
+| EMP001 | 张三 | 技术部 | 否 |
+| EMP002 | 李四 | 产品部 | 否 |
+| EMP003 | 王五 | 市场部 | 否 |
+| EMP004 | 赵六 | 人事部 | 否 |
+| EMP005 | 钱七 | 财务部 | 否 |
+| EMP006 | 孙八 | 技术部 | 否 |
+| EMP007 | 周九 | 运营部 | 否 |
+| EMP008 | 吴十 | 技术部 | **是** |
+| EMP009 | 郑十一 | 产品部 | 否 |
+| EMP010 | 冯十二 | 市场部 | 否 |
+
+## 核心功能
+
+### 1. 员工报名
+- 选择线路和站点进行报名
+- 满员站点自动进入候补队列
+- 支持取消报名
+- 候补人员自动转正
+
+### 2. 折叠分组（新增）
+- 司机视图支持按站点折叠/展开
+- 点击站点头部或折叠按钮切换状态
+- 折叠状态同步到历史记录
+- 站点头部显示签到进度统计
+
+### 3. 候补队列管理
+- 查看各站点候补队列
+- 管理员可手动转正候补人员
+- 支持开启/关闭候补功能
+
+### 4. 改签管理
+- 员工可申请改签线路和站点
+- 改签记录完整保留
+
+### 5. 司机签到
+- 查看当日乘车名单
+- 按站点分组展示
+- 支持折叠分组功能
+- 一键签到确认
+
+### 6. 数据导出
+- 导出乘车名单为 CSV 格式
+- 包含完整的签到信息
+
+### 7. 历史记录
+- **改签记录**: 查看所有改签操作历史
+- **折叠记录**: 查看站点折叠/展开操作历史（管理员视图）
+
+## 技术栈
+
+- **框架**: React 18 + TypeScript
+- **构建工具**: Vite
+- **状态管理**: Zustand
+- **样式**: Tailwind CSS
+- **图标**: Lucide React
+
+## 开发运行
+
+```bash
+# 安装依赖
+npm install
+
+# 启动开发服务器
+npm run dev
+
+# 构建生产版本
+npm run build
+
+# 代码检查
+npm run lint
 ```
+
+## 验证脚本
+
+```bash
+# 运行 Smoke 测试
+./scripts/smoke.sh
+
+# 运行完整验证（需在项目根目录执行）
+./verify-843.sh
+```
+
+## 功能限制
+
+- 满员站点只能候补，不能直接报名
+- 司机只能查看当天的乘车名单
+- 候补人员不占用站点容量

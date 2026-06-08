@@ -1,5 +1,5 @@
 import React from 'react';
-import { UserCheck, MapPin, CheckCircle2, Circle, Bus, Clock, AlertTriangle } from 'lucide-react';
+import { UserCheck, MapPin, CheckCircle2, Circle, Bus, Clock, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
 import { useShuttleStore } from '../store/useShuttleStore';
 import { getToday } from '../data/mockData';
 
@@ -13,6 +13,8 @@ export const DriverCheckIn: React.FC = () => {
     checkInEmployee,
     viewMode,
     setSelectedDate,
+    toggleStopFolded,
+    isStopFolded,
   } = useShuttleStore();
 
   const today = getToday();
@@ -106,83 +108,107 @@ export const DriverCheckIn: React.FC = () => {
       </div>
 
       <div className="space-y-6">
-        {driverRoster.map(({ stop, registrations }) => (
-          <div key={stop.id} className="border border-gray-200 rounded-lg overflow-hidden">
-            <div className="bg-gray-50 px-4 py-3 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <MapPin size={18} className="text-gray-500" />
-                <span className="font-semibold text-gray-800">
-                  {stop.order}. {stop.name}
-                </span>
-                <span className="text-sm text-gray-500">
-                  ({registrations.length} 人)
-                </span>
+        {driverRoster.map(({ stop, registrations }) => {
+          const folded = isStopFolded(selectedRoute.id, stop.id, effectiveDate);
+          const checkedInCount = registrations.filter((r) => r.status === 'checked-in').length;
+
+          return (
+            <div key={stop.id} className="border border-gray-200 rounded-lg overflow-hidden">
+              <div
+                className="bg-gray-50 px-4 py-3 flex items-center justify-between cursor-pointer hover:bg-gray-100 transition-colors"
+                onClick={() => toggleStopFolded(selectedRoute.id, stop.id, effectiveDate, selectedRoute.driverName)}
+              >
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleStopFolded(selectedRoute.id, stop.id, effectiveDate, selectedRoute.driverName);
+                    }}
+                    className="p-1 hover:bg-gray-200 rounded transition-colors"
+                  >
+                    {folded ? <ChevronDown size={20} className="text-gray-500" /> : <ChevronUp size={20} className="text-gray-500" />}
+                  </button>
+                  <MapPin size={18} className="text-gray-500" />
+                  <span className="font-semibold text-gray-800">
+                    {stop.order}. {stop.name}
+                  </span>
+                  <span className="text-sm text-gray-500">
+                    ({registrations.length} 人, 已签到 {checkedInCount}/{registrations.length})
+                  </span>
+                  {folded && (
+                    <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full">
+                      已折叠
+                    </span>
+                  )}
+                </div>
+                <span className="text-sm text-gray-500">{effectiveDate}</span>
               </div>
-              <span className="text-sm text-gray-500">{effectiveDate}</span>
-            </div>
 
-            <div className="p-4">
-              {registrations.length === 0 ? (
-                <div className="text-center py-4 text-gray-400 text-sm">该站点暂无乘车人员</div>
-              ) : (
-                <div className="space-y-2">
-                  {registrations.map((reg) => {
-                    const employee = getEmployeeById(reg.employeeId);
-                    const isCheckedIn = reg.status === 'checked-in';
+              {!folded && (
+                <div className="p-4">
+                  {registrations.length === 0 ? (
+                    <div className="text-center py-4 text-gray-400 text-sm">该站点暂无乘车人员</div>
+                  ) : (
+                    <div className="space-y-2">
+                      {registrations.map((reg) => {
+                        const employee = getEmployeeById(reg.employeeId);
+                        const isCheckedIn = reg.status === 'checked-in';
 
-                    return (
-                      <div
-                        key={reg.id}
-                        className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${
-                          isCheckedIn
-                            ? 'bg-green-50 border-green-200'
-                            : 'bg-white border-gray-200 hover:border-blue-300'
-                        }`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <button
-                            onClick={() => {
-                              if (!isCheckedIn) {
-                                const result = checkInEmployee(reg.id, selectedRoute.driverName);
-                                alert(result.message);
-                              }
-                            }}
-                            disabled={isCheckedIn}
-                            className={`p-1 rounded-full transition-colors ${
+                        return (
+                          <div
+                            key={reg.id}
+                            className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${
                               isCheckedIn
-                                ? 'text-green-500 cursor-default'
-                                : 'text-gray-300 hover:text-blue-500 cursor-pointer'
+                                ? 'bg-green-50 border-green-200'
+                                : 'bg-white border-gray-200 hover:border-blue-300'
                             }`}
                           >
-                            {isCheckedIn ? <CheckCircle2 size={24} /> : <Circle size={24} />}
-                          </button>
-                          <div>
-                            <div className={`font-medium ${isCheckedIn ? 'text-green-800' : 'text-gray-800'}`}>
-                              {employee?.name || '未知'}
+                            <div className="flex items-center gap-3">
+                              <button
+                                onClick={() => {
+                                  if (!isCheckedIn) {
+                                    const result = checkInEmployee(reg.id, selectedRoute.driverName);
+                                    alert(result.message);
+                                  }
+                                }}
+                                disabled={isCheckedIn}
+                                className={`p-1 rounded-full transition-colors ${
+                                  isCheckedIn
+                                    ? 'text-green-500 cursor-default'
+                                    : 'text-gray-300 hover:text-blue-500 cursor-pointer'
+                                }`}
+                              >
+                                {isCheckedIn ? <CheckCircle2 size={24} /> : <Circle size={24} />}
+                              </button>
+                              <div>
+                                <div className={`font-medium ${isCheckedIn ? 'text-green-800' : 'text-gray-800'}`}>
+                                  {employee?.name || '未知'}
+                                </div>
+                                <div className="text-xs text-gray-500">
+                                  {employee?.department} · {employee?.employeeNo} · {employee?.phone}
+                                </div>
+                              </div>
                             </div>
-                            <div className="text-xs text-gray-500">
-                              {employee?.department} · {employee?.employeeNo} · {employee?.phone}
+                            <div className="text-right">
+                              {isCheckedIn ? (
+                                <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700 bg-green-100 px-2 py-1 rounded">
+                                  <CheckCircle2 size={12} />
+                                  已签到
+                                </span>
+                              ) : (
+                                <span className="text-xs text-gray-400">点击左侧圆圈签到</span>
+                              )}
                             </div>
                           </div>
-                        </div>
-                        <div className="text-right">
-                          {isCheckedIn ? (
-                            <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700 bg-green-100 px-2 py-1 rounded">
-                              <CheckCircle2 size={12} />
-                              已签到
-                            </span>
-                          ) : (
-                            <span className="text-xs text-gray-400">点击左侧圆圈签到</span>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

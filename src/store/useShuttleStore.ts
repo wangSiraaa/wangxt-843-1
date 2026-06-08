@@ -8,6 +8,7 @@ import type {
   Stop,
   Route,
   RegistrationStatus,
+  FoldRecord,
 } from '../types';
 import {
   mockRoutes,
@@ -43,6 +44,9 @@ interface ShuttleStore extends AppState {
   getRouteById: (routeId: string) => Route | undefined;
   getStopById: (routeId: string, stopId: string) => Stop | undefined;
   getEmployeeById: (employeeId: string) => typeof mockEmployees[0] | undefined;
+  toggleStopFolded: (routeId: string, stopId: string, date: string, operatedBy: string) => void;
+  isStopFolded: (routeId: string, stopId: string, date: string) => boolean;
+  getFoldRecordsForRoute: (routeId: string, date: string) => FoldRecord[];
   resetStore: () => void;
 }
 
@@ -53,6 +57,8 @@ const getInitialState = (): Omit<AppState, 'selectedRouteId' | 'selectedDate' | 
   waitlistEntries: JSON.parse(JSON.stringify(mockWaitlistEntries)),
   changeRecords: JSON.parse(JSON.stringify(mockChangeRecords)),
   checkInRecords: JSON.parse(JSON.stringify(mockCheckInRecords)),
+  foldRecords: [],
+  foldedStops: {},
 });
 
 export const useShuttleStore = create<ShuttleStore>((set, get) => ({
@@ -450,6 +456,49 @@ export const useShuttleStore = create<ShuttleStore>((set, get) => ({
     return csv;
   },
 
+  isStopFolded: (routeId, stopId, date) => {
+    const key = `${routeId}-${stopId}-${date}`;
+    return get().foldedStops[key] || false;
+  },
+
+  toggleStopFolded: (routeId, stopId, date, operatedBy) => {
+    const key = `${routeId}-${stopId}-${date}`;
+    const state = get();
+    const currentFolded = state.foldedStops[key] || false;
+    const newFolded = !currentFolded;
+
+    const foldRecord: FoldRecord = {
+      id: generateId(),
+      routeId,
+      stopId,
+      date,
+      isFolded: newFolded,
+      operatedBy,
+      operatedAt: new Date().toISOString(),
+    };
+
+    set((state) => ({
+      foldedStops: {
+        ...state.foldedStops,
+        [key]: newFolded,
+      },
+      foldRecords: [...state.foldRecords, foldRecord],
+    }));
+  },
+
+  getFoldRecordsForRoute: (routeId, date) => {
+    const allRecords = get().foldRecords;
+    return allRecords
+      .map((record, index) => ({ record, originalIndex: index }))
+      .filter((item) => item.record.routeId === routeId && item.record.date === date)
+      .sort((a, b) => {
+        const timeDiff = new Date(b.record.operatedAt).getTime() - new Date(a.record.operatedAt).getTime();
+        if (timeDiff !== 0) return timeDiff;
+        return b.originalIndex - a.originalIndex;
+      })
+      .map((item) => item.record);
+  },
+
   resetStore: () => {
     set({
       ...getInitialState(),
@@ -457,6 +506,8 @@ export const useShuttleStore = create<ShuttleStore>((set, get) => ({
       selectedDate: getToday(),
       viewMode: 'employee',
       currentEmployeeId: 'e8',
+      foldRecords: [],
+      foldedStops: {},
     });
   },
 }));
