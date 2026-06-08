@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Bus, RotateCcw, Play } from 'lucide-react';
 import {
   RouteFilter,
@@ -10,14 +10,29 @@ import {
 } from './components';
 import { useShuttleStore } from './store/useShuttleStore';
 import { runSmokeTest } from './smoke/smokeTest';
+import type { AppState } from './types';
 
 type TabType = 'registration' | 'waitlist' | 'change' | 'checkin' | 'export';
 
+const getDefaultTabForViewMode = (viewMode: AppState['viewMode']): TabType => {
+  if (viewMode === 'driver') return 'checkin';
+  return 'registration';
+};
+
 function App() {
-  const { viewMode, resetStore, selectedRouteId } = useShuttleStore();
-  const [activeTab, setActiveTab] = useState<TabType>('registration');
+  const { viewMode, resetStore, selectedRouteId, setSelectedDate } = useShuttleStore();
+  const [activeTab, setActiveTab] = useState<TabType>(getDefaultTabForViewMode(viewMode));
   const [smokeResult, setSmokeResult] = useState<string | null>(null);
   const [showSmoke, setShowSmoke] = useState(false);
+
+  useEffect(() => {
+    const defaultTab = getDefaultTabForViewMode(viewMode);
+    setActiveTab(defaultTab);
+    if (viewMode === 'driver') {
+      const today = new Date().toISOString().split('T')[0];
+      setSelectedDate(today);
+    }
+  }, [viewMode, setSelectedDate]);
 
   const handleRunSmoke = () => {
     resetStore();

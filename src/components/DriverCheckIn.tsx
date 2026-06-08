@@ -1,6 +1,7 @@
 import React from 'react';
-import { UserCheck, MapPin, CheckCircle2, Circle, Bus, Clock } from 'lucide-react';
+import { UserCheck, MapPin, CheckCircle2, Circle, Bus, Clock, AlertTriangle } from 'lucide-react';
 import { useShuttleStore } from '../store/useShuttleStore';
+import { getToday } from '../data/mockData';
 
 export const DriverCheckIn: React.FC = () => {
   const {
@@ -11,9 +12,14 @@ export const DriverCheckIn: React.FC = () => {
     getEmployeeById,
     checkInEmployee,
     viewMode,
+    setSelectedDate,
   } = useShuttleStore();
 
+  const today = getToday();
+  const isToday = selectedDate === today;
+
   const selectedRoute = routes.find((r) => r.id === selectedRouteId);
+  const effectiveDate = today;
 
   if (viewMode !== 'driver') {
     return (
@@ -37,7 +43,7 @@ export const DriverCheckIn: React.FC = () => {
     );
   }
 
-  const driverRoster = getDriverRoster(selectedRoute.id, selectedDate);
+  const driverRoster = getDriverRoster(selectedRoute.id, effectiveDate);
   const totalPassengers = driverRoster.reduce((sum, r) => sum + r.registrations.length, 0);
   const checkedInCount = driverRoster.reduce(
     (sum, r) => sum + r.registrations.filter((reg) => reg.status === 'checked-in').length,
@@ -46,6 +52,22 @@ export const DriverCheckIn: React.FC = () => {
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+      {!isToday && (
+        <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg flex items-center gap-3">
+          <AlertTriangle className="text-amber-600 flex-shrink-0" size={20} />
+          <div className="flex-1">
+            <p className="text-sm font-medium text-amber-800">司机只能查看当天的乘车名单</p>
+            <p className="text-xs text-amber-600">已自动切换到今天 ({today}) 的数据</p>
+          </div>
+          <button
+            onClick={() => setSelectedDate(today)}
+            className="px-3 py-1.5 bg-amber-600 text-white text-xs font-medium rounded-md hover:bg-amber-700 transition-colors"
+          >
+            切换到今天
+          </button>
+        </div>
+      )}
+
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-2">
           <UserCheck className="text-blue-600" size={24} />
@@ -96,7 +118,7 @@ export const DriverCheckIn: React.FC = () => {
                   ({registrations.length} 人)
                 </span>
               </div>
-              <span className="text-sm text-gray-500">{selectedDate}</span>
+              <span className="text-sm text-gray-500">{effectiveDate}</span>
             </div>
 
             <div className="p-4">

@@ -64,7 +64,13 @@ export const useShuttleStore = create<ShuttleStore>((set, get) => ({
 
   setSelectedRoute: (routeId) => set({ selectedRouteId: routeId }),
   setSelectedDate: (date) => set({ selectedDate: date }),
-  setViewMode: (mode) => set({ viewMode: mode }),
+  setViewMode: (mode) => {
+    if (mode === 'driver') {
+      set({ viewMode: mode, selectedDate: getToday() });
+    } else {
+      set({ viewMode: mode });
+    }
+  },
   setCurrentEmployee: (employeeId) => set({ currentEmployeeId: employeeId }),
 
   getRouteById: (routeId) => {
