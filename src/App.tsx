@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Bus, RotateCcw, Play } from 'lucide-react';
 import {
   RouteFilter,
@@ -25,14 +25,18 @@ function App() {
   const [smokeResult, setSmokeResult] = useState<string | null>(null);
   const [showSmoke, setShowSmoke] = useState(false);
 
-  useEffect(() => {
-    const defaultTab = getDefaultTabForViewMode(viewMode);
+  const handleViewModeChange = useCallback((newViewMode: AppState['viewMode']) => {
+    const defaultTab = getDefaultTabForViewMode(newViewMode);
     setActiveTab(defaultTab);
-    if (viewMode === 'driver') {
+    if (newViewMode === 'driver') {
       const today = new Date().toISOString().split('T')[0];
       setSelectedDate(today);
     }
-  }, [viewMode, setSelectedDate]);
+  }, [setSelectedDate]);
+
+  useEffect(() => {
+    handleViewModeChange(viewMode);
+  }, [viewMode, handleViewModeChange]);
 
   const handleRunSmoke = () => {
     resetStore();

@@ -37,7 +37,6 @@ interface TestStore extends AppState {
   getStopById: (routeId: string, stopId: string) => Stop | undefined;
   getEmployeeById: (employeeId: string) => typeof mockEmployees[0] | undefined;
   promoteFromWaitlist: (waitlistEntryId: string) => { success: boolean; message: string };
-  toggleWaitlistEnabled: (routeId: string, stopId: string) => void;
   resetStore: () => void;
 }
 
@@ -314,20 +313,6 @@ const createTestStore = () => {
       return { success: true, message: '候补转正成功' };
     },
 
-    toggleWaitlistEnabled: (routeId, stopId) => {
-      set((state) => ({
-        routes: state.routes.map((route) => {
-          if (route.id !== routeId) return route;
-          return {
-            ...route,
-            stops: route.stops.map((stop) =>
-              stop.id === stopId ? { ...stop, waitlistEnabled: !stop.waitlistEnabled } : stop
-            ),
-          };
-        }),
-      }));
-    },
-
     resetStore: () => {
       set({
         ...getInitialState(),
@@ -383,13 +368,13 @@ const runSmokeAssertions = async (): Promise<{ passed: number; failed: number; d
   const initialCap = store.getState().getStopCapacity(routeId, stopId);
   logInfo(`初始状态: 总容量=${initialCap.total}, 已用=${initialCap.used}, 剩余=${initialCap.remaining}, 候补=${initialCap.waitlistCount}`);
 
-  const t1a = assert(
+  assert(
     initialCap.used === 5 && initialCap.total === 5 && initialCap.remaining === 0,
     '初始状态满员验证',
     `国贸站初始状态: 已用=${initialCap.used}, 剩余=${initialCap.remaining} (期望: 已用=5, 剩余=0)`
   );
 
-  const t1b = assert(
+  assert(
     initialCap.waitlistCount === 2,
     '初始候补人数验证',
     `当前候补人数=${initialCap.waitlistCount} (期望: 2)`
@@ -401,7 +386,7 @@ const runSmokeAssertions = async (): Promise<{ passed: number; failed: number; d
   const result = store.getState().registerEmployee(newEmployeeId, routeId, stopId, testDate);
   logInfo(`报名结果: ${result.message}`);
 
-  const t1c = assert(
+  assert(
     result.success === true && result.isWaitlist === true,
     '满员后报名进入候补',
     `新员工报名满员站点应进入候补，实际: isWaitlist=${result.isWaitlist}`
@@ -410,19 +395,19 @@ const runSmokeAssertions = async (): Promise<{ passed: number; failed: number; d
   const capAfterWaitlist = store.getState().getStopCapacity(routeId, stopId);
   logInfo(`报名后状态: 总容量=${capAfterWaitlist.total}, 已用=${capAfterWaitlist.used}, 剩余=${capAfterWaitlist.remaining}, 候补=${capAfterWaitlist.waitlistCount}`);
 
-  const t1d = assert(
+  assert(
     capAfterWaitlist.remaining === 0,
     '关键断言: 满员后进入候补，站点余量保持0不增加',
     `剩余座位=${capAfterWaitlist.remaining} (期望: 0，候补不占用容量)`
   );
 
-  const t1e = assert(
+  assert(
     capAfterWaitlist.used === 5,
     '已用座位保持不变',
     `已用座位=${capAfterWaitlist.used} (期望: 5)`
   );
 
-  const t1f = assert(
+  assert(
     capAfterWaitlist.waitlistCount === 3,
     '候补人数增加',
     `候补人数=${capAfterWaitlist.waitlistCount} (期望: 3)`
@@ -439,7 +424,7 @@ const runSmokeAssertions = async (): Promise<{ passed: number; failed: number; d
   store.getState().setSelectedDate(yesterdayStr);
   logInfo(`管理员将日期改为昨天: ${store.getState().selectedDate}`);
 
-  const t2a = assert(
+  assert(
     store.getState().selectedDate === yesterdayStr,
     '管理员可以修改日期',
     `当前日期=${store.getState().selectedDate} (期望: ${yesterdayStr})`
@@ -448,13 +433,13 @@ const runSmokeAssertions = async (): Promise<{ passed: number; failed: number; d
   logInfo('管理员切换到司机视图...');
   store.getState().setViewMode('driver');
 
-  const t2b = assert(
+  assert(
     store.getState().viewMode === 'driver',
     '视图切换成功',
     `当前视图=${store.getState().viewMode} (期望: driver)`
   );
 
-  const t2c = assert(
+  assert(
     store.getState().selectedDate === getToday(),
     '切换到司机视图后日期自动重置为今天',
     `当前日期=${store.getState().selectedDate} (期望: ${getToday()})`
@@ -468,14 +453,14 @@ const runSmokeAssertions = async (): Promise<{ passed: number; failed: number; d
     logInfo(`  - ${stop.name}: ${registrations.length} 人`);
   });
 
-  const t2d = assert(
+  assert(
     driverRoster.length > 0 && totalPassengers > 0,
     '司机视图能看到当天乘车名单',
     `站点数=${driverRoster.length}, 乘客数=${totalPassengers} (均应 > 0)`
   );
 
   const guomaoStop = driverRoster.find((r) => r.stop.id === 's1');
-  const t2e = assert(
+  assert(
     guomaoStop !== undefined && guomaoStop.registrations.length === 5,
     '国贸站显示5名已确认乘客',
     `国贸站乘车人数=${guomaoStop?.registrations.length} (期望: 5，候补不显示在司机名单中)`
@@ -494,14 +479,14 @@ const runSmokeAssertions = async (): Promise<{ passed: number; failed: number; d
     return store.getState().viewMode === 'driver' && store.getState().selectedDate === getToday();
   };
 
-  const t3a = assert(
+  assert(
     testDriverTab(),
     '司机视图默认进入签到核对',
     `切换到司机视图后，日期自动重置为今天，视图为driver`
   );
 
   store.getState().setViewMode('admin');
-  const t3b = assert(
+  assert(
     store.getState().viewMode === 'admin',
     '可以切回管理员视图',
     `视图切换回admin成功`
@@ -536,9 +521,15 @@ const runSmokeAssertions = async (): Promise<{ passed: number; failed: number; d
   return { passed, failed, details };
 };
 
-const isMainModule = import.meta.url === `file://${process.argv[1]}`;
+const isMainModule = (): boolean => {
+  try {
+    return import.meta.url === `file://${process.argv[1]}`;
+  } catch {
+    return false;
+  }
+};
 
-if (isMainModule) {
+if (isMainModule()) {
   console.log('Starting smoke assertions...');
   runSmokeAssertions()
     .then(({ passed, failed, details }) => {
